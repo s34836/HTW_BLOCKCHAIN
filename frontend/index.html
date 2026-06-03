@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supervisor Dashboard</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="brand">Supervisor Dashboard</div>
+      <div class="status-badge">Agent Status: <strong id="agent-status">Active</strong></div>
+    </header>
+
+    <main class="grid-container">
+      <section class="card card-1">
+        <h2>Budget Controls</h2>
+        <div class="field-row"><span>Contract Max:</span><strong id="max-amount">-- ETH</strong></div>
+        <div class="field-row"><span>Contract Balance:</span><strong id="contract-balance">-- ETH</strong></div>
+        <div class="field-row"><span>Status:</span><strong id="contract-status">ACTIVE</strong></div>
+        <div class="button-row">
+          <button type="button" id="pause-btn">Pause Agent</button>
+          <button type="button" id="edit-limits-btn">Edit Limits</button>
+        </div>
+      </section>
+
+      <section class="card card-2">
+        <h2>Approved Providers</h2>
+        <ol id="approved-providers">
+          <li id="provider-status">Fetching from contract...</li>
+        </ol>
+        <div class="button-row">
+          <button type="button" id="add-provider-btn">Add</button>
+          <button type="button" id="remove-provider-btn">Remove</button>
+        </div>
+      </section>
+
+      <section class="card card-3">
+        <h2>Alerts</h2>
+        <ul class="alert-list">
+          <li>Loading...</li>
+        </ul>
+      </section>
+
+      <section class="card card-4">
+        <h2>Oracle Status</h2>
+        <div class="info-row"><span>Assigned Oracle:</span><strong id="oracle-address">0xA81...92F</strong></div>
+        <div class="info-row"><span>Last Confirmation:</span><strong id="oracle-last">12:43</strong></div>
+        <div class="info-row"><span>Health:</span><strong id="oracle-health">OK</strong></div>
+      </section>
+
+      <section class="card card-5">
+        <h2>Allowed Endpoints</h2>
+        <ul id="allowed-endpoints">
+          <li>Loading endpoints...</li>
+        </ul>
+      </section>
+
+      <section class="card card-6">
+        <h2>Recent Requests</h2>
+        <div id="recent-requests-list">
+          <div class="request-row"><span>Request Count:</span><strong id="request-count">0</strong></div>
+        </div>
+      </section>
+      <section class="card card-7">
+        <h2>Policy Summary</h2>
+        <p>Network: Sepolia Testnet</p>
+        <p>Contract: Micropayment System</p>
+        <p>Auto-execute enabled</p>
+        <p>Refresh to update</p>
+      </section>
+    </main>
+
+    <footer class="footer-panel">
+      <div>
+        <button id="refresh-status">Refresh contract status</button>
+        <span id="contract-info">Contract: not attached</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
