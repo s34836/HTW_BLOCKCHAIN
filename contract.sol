@@ -1,106 +1,143 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-contract BusinessHub {
-    // --- DANE STANDARDU ERC-20 ---
-    string public name = "Igor Business Token";
-    string public symbol = "IBT";
-    uint8 public decimals = 0; 
-    uint256 public totalSupply;
+contract AIAgentMicropayment {
+    address public owner;
+    address public oracle;
+    bool public paused;
+    uint256 public maxAmountWei;
 
-    address public owner; // Arbiter systemu
-    mapping(address => uint256) public balanceOf;
-
-    // --- STRUKTURA ESCROW ---
-    struct EscrowOrder {
-        address buyer;
-        address seller;
+    struct Request {
+        address requester;
+        address provider;
         uint256 amount;
-        bool released;
-        bool refunded;
+        string resourceId;
+        bool fulfilled;
+        bool paid;
     }
 
-    mapping(uint256 => EscrowOrder) public orders;
-    uint256 public nextOrderId;
+    uint256 public requestCount;
+    mapping(uint256 => Request) public requests;
+    mapping(address => bool) public approvedProviders;
 
-    // --- ZDARZENIA (EVENTS) DLA AUDYTU ---
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event TransactionLogged(address indexed from, address indexed to, uint256 amount, string reason);
-    event EscrowCreated(uint256 orderId, address buyer, address seller, uint256 amount);
-
-    // --- UPRAWNIENIA ---
-    constructor() {
-        owner = msg.sender; // Ty (Igor) jesteś głównym Arbitrem
-    }
+    event ProviderApproved(address provider, bool approved);
+    event OracleUpdated(address oracle);
+    event MaxAmountUpdated(uint256 maxAmountWei);
+    event FundsDeposited(address from, uint256 amount);
+    event FundsWithdrawn(address to, uint256 amount);
+    event RequestCreated(
+        uint256 indexed requestId,
+        address indexed requester,
+        address indexed provider,
+        uint256 amount,
+        string resourceId
+    );
+    event DeliveryConfirmed(uint256 indexed requestId);
+    event PaymentReleased(uint256 indexed requestId, address indexed provider, uint256 amount);
+    event Paused(bool status);
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "Tylko Arbiter moze to zrobic!");
+        require(msg.sender == owner, "Not owner");
         _;
     }
 
-    // --- 1. EMISJA WALUTY (MINT) ---
-    function mint(uint256 amount) public {
-        balanceOf[msg.sender] += amount;
-        totalSupply += amount;
-        emit Transfer(address(0), msg.sender, amount);
+    modifier onlyOracle() {
+        require(msg.sender == oracle, "Not oracle");
+        _;
     }
 
-    // --- 2. ZWYKŁA PŁATNOŚĆ BIZNESOWA (T-INSTANT) ---
-    function executeProcess(address receiver, uint256 amount, string memory reason) public {
-        require(balanceOf[msg.sender] >= amount, "Brak srodkow");
-        
-        balanceOf[msg.sender] -= amount;
-        balanceOf[receiver] += amount;
-        
-        emit Transfer(msg.sender, receiver, amount);
-        emit TransactionLogged(msg.sender, receiver, amount, reason);
+    modifier notPaused() {
+        require(!paused, "Contract paused");
+        _;
     }
 
-    // --- 3. SYSTEM ESCROW (ZAUFANIE TRZECIEJ STRONY) ---
-    
-    // Franek blokuje środki dla Ziutka
-    function createEscrow(address seller, uint256 amount) public {
-        require(balanceOf[msg.sender] >= amount, "Brak srodkow na Escrow");
-        
-        balanceOf[msg.sender] -= amount;
-        balanceOf[address(this)] += amount; // Środki zostają w kontrakcie
-
-        orders[nextOrderId] = EscrowOrder(msg.sender, seller, amount, false, false);
-        
-        emit EscrowCreated(nextOrderId, msg.sender, seller, amount);
-        emit TransactionLogged(msg.sender, seller, amount, "Escrow Secured");
-        nextOrderId++;
+    constructor(address _oracle, uint256 _maxAmountWei) {
+        require(_oracle != address(0), "Oracle required");
+        owner = msg.sender;
+        oracle = _oracle;
+        maxAmountWei = _maxAmountWei;
     }
 
-    // Zwolnienie kasy (Może kliknąć Franek LUB Ty jako Arbiter)
-    function releaseEscrow(uint256 orderId) public {
-        EscrowOrder storage order = orders[orderId];
-        require(!order.released && !order.refunded, "Zamowienie juz rozliczone");
-        require(msg.sender == owner || msg.sender == order.buyer, "Brak uprawnien");
-
-        order.released = true;
-        balanceOf[address(this)] -= order.amount;
-        balanceOf[order.seller] += order.amount;
-
-        emit Transfer(address(this), order.seller, order.amount);
-        emit TransactionLogged(order.buyer, order.seller, order.amount, "Escrow Released");
+    receive() external payable {
+        emit FundsDeposited(msg.sender, msg.value);
     }
 
-    // Zwrot kasy (Tylko Ty jako Arbiter, jeśli Ziutek oszukał Franka)
-    function refundEscrow(uint256 orderId) public onlyOwner {
-        EscrowOrder storage order = orders[orderId];
-        require(!order.released && !order.refunded, "Zamowienie juz rozliczone");
-
-        order.refunded = true;
-        balanceOf[address(this)] -= order.amount;
-        balanceOf[order.buyer] += order.amount;
-
-        emit Transfer(address(this), order.buyer, order.amount);
-        emit TransactionLogged(address(this), order.buyer, order.amount, "Escrow Refunded by Arbiter");
+    function deposit() external payable onlyOwner {
+        emit FundsDeposited(msg.sender, msg.value);
     }
 
-    // --- FUNKCJE POMOCNICZE ---
-    function getBalance(address account) public view returns (uint256) {
-        return balanceOf[account];
+    function withdraw(uint256 amount) external onlyOwner {
+        require(address(this).balance >= amount, "Insufficient balance");
+        payable(owner).transfer(amount);
+        emit FundsWithdrawn(owner, amount);
+    }
+
+    function setOracle(address _oracle) external onlyOwner {
+        require(_oracle != address(0), "Invalid oracle");
+        oracle = _oracle;
+        emit OracleUpdated(_oracle);
+    }
+
+    function setMaxAmount(uint256 _maxAmountWei) external onlyOwner {
+        require(_maxAmountWei > 0, "Limit required");
+        maxAmountWei = _maxAmountWei;
+        emit MaxAmountUpdated(_maxAmountWei);
+    }
+
+    function approveProvider(address provider, bool approved) external onlyOwner {
+        require(provider != address(0), "Invalid provider");
+        approvedProviders[provider] = approved;
+        emit ProviderApproved(provider, approved);
+    }
+
+    function setPaused(bool _paused) external onlyOwner {
+        paused = _paused;
+        emit Paused(_paused);
+    }
+
+    function requestResource(
+        address provider,
+        uint256 amount,
+        string calldata resourceId
+    ) external notPaused returns (uint256) {
+        require(approvedProviders[provider], "Provider not approved");
+        require(amount > 0, "Amount must be > 0");
+        require(amount <= maxAmountWei, "Amount exceeds limit");
+        require(address(this).balance >= amount, "Insufficient contract balance");
+
+        requestCount += 1;
+        requests[requestCount] = Request({
+            requester: msg.sender,
+            provider: provider,
+            amount: amount,
+            resourceId: resourceId,
+            fulfilled: false,
+            paid: false
+        });
+
+        emit RequestCreated(requestCount, msg.sender, provider, amount, resourceId);
+        return requestCount;
+    }
+
+    function confirmDelivery(uint256 requestId) external onlyOracle notPaused {
+        Request storage r = requests[requestId];
+        require(r.amount > 0, "Invalid request");
+        require(!r.fulfilled, "Already fulfilled");
+
+        r.fulfilled = true;
+        emit DeliveryConfirmed(requestId);
+    }
+
+    function releasePayment(uint256 requestId) external notPaused {
+        Request storage r = requests[requestId];
+        require(r.amount > 0, "Invalid request");
+        require(r.fulfilled, "Delivery not confirmed");
+        require(!r.paid, "Already paid");
+        require(approvedProviders[r.provider], "Provider no longer approved");
+        require(address(this).balance >= r.amount, "Insufficient balance");
+
+        r.paid = true;
+        payable(r.provider).transfer(r.amount);
+
+        emit PaymentReleased(requestId, r.provider, r.amount);
     }
 }
