@@ -8,8 +8,8 @@ from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import create_react_agent
 
-from agent_system.settings import agent_settings
-from agent_system.tools import list_available_providers, purchase_random_numbers
+from agent_backend.settings import agent_settings
+from agent_backend.tools import list_available_providers, purchase_random_numbers
 
 
 class AgentState(TypedDict):
@@ -104,7 +104,7 @@ def build_multi_agent_graph():
 
 
 async def run_multi_agent(user_query: str) -> dict:
-    from agent_system.chat import run_chat
+    from agent_backend.chat import run_chat
 
     result = await run_chat(user_query, history=[])
     return {
@@ -119,7 +119,7 @@ def run_direct_purchase(count: int) -> dict:
     """Run without LLM (useful when OPENAI_API_KEY is not set)."""
     import httpx
 
-    from agent_system.purchase_flow import PurchaseError, run_purchase_random_numbers
+    from agent_backend.purchase_flow import PurchaseError, run_purchase_random_numbers
 
     base = agent_settings.supervisor_url.rstrip("/")
     with httpx.Client(timeout=agent_settings.http_timeout) as client:

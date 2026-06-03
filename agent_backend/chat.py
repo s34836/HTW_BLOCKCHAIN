@@ -4,8 +4,8 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
-from agent_system.settings import agent_settings
-from agent_system.tools import list_available_providers, purchase_random_numbers
+from agent_backend.settings import agent_settings
+from agent_backend.tools import list_available_providers, purchase_random_numbers
 
 CHAT_SYSTEM_PROMPT = """You are a micropayment AI assistant for an HTW blockchain demo on Sepolia.
 

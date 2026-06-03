@@ -4,8 +4,8 @@ from typing import Any
 import httpx
 from langchain_core.tools import tool
 
-from agent_system.purchase_flow import PurchaseError, run_purchase_random_numbers
-from agent_system.settings import agent_settings
+from agent_backend.purchase_flow import PurchaseError, run_purchase_random_numbers
+from agent_backend.settings import agent_settings
 
 
 def _supervisor_request(method: str, path: str, json_body: dict | None = None) -> dict[str, Any]:

@@ -6,21 +6,34 @@ This repository contains a Solidity contract and a Python backend for managing i
 
 | Path | Role |
 |------|------|
-| `backend/` | Supervisor API + admin dashboard (`frontend/`), `contract.sol` |
-| `agent_system/` | LangChain agent (mounted on supervisor, CLI) |
+| `backend_supervisor/` | Supervisor API, `contract.sol` |
+| `frontend_supervisor/` | Supervisor dashboard (static UI served by supervisor API) |
+| `agent_backend/` | LangChain agent (mounted on supervisor, CLI) |
 | `agent_frontend/` | Agent chat UI (port 8003) |
 | `providers/` | Independent data provider APIs |
 
 `.env` stays in the repository root.
 
+### Console logging
+
+Each backend logs to stdout with a service tag, for example:
+
+```text
+14:32:01 | supervisor           | INFO    | → POST /refund-to-buyer from 127.0.0.1
+14:32:01 | agent                | INFO    | Refund to requester request #5 -> 0x71FE...
+14:32:15 | provider-alpha       | INFO    | Serving 10 random numbers to client
+```
+
+Set verbosity in `.env`: `LOG_LEVEL=DEBUG` (default `INFO`). Uvicorn access logs are reduced to avoid duplicate lines.
+
 ## Python Backend
 
-The supervisor backend lives in `backend/` and exposes HTTP endpoints to deploy and interact with the `AIAgentMicropayment` contract defined in `backend/contract.sol`.
+The supervisor backend lives in `backend_supervisor/` and exposes HTTP endpoints to deploy and interact with the `AIAgentMicropayment` contract defined in `backend_supervisor/contract.sol`. The dashboard UI is in `frontend_supervisor/`.
 
 ### Install dependencies
 
 ```bash
-python -m pip install -r backend/requirements.txt
+python -m pip install -r backend_supervisor/requirements.txt
 ```
 
 ### Backend configuration
@@ -73,7 +86,7 @@ Four separate backends (supervisor, agent chat UI, two data providers):
 .venv/bin/uvicorn providers.beta_app:app --host 0.0.0.0 --port 8002
 
 # Terminal 3 — Supervisor / micropayment API + dashboard
-.venv/bin/uvicorn backend.app:app --host 0.0.0.0 --port 8000
+.venv/bin/uvicorn backend_supervisor.app:app --host 0.0.0.0 --port 8000
 
 # Terminal 4 — Agent chat UI (calls supervisor API)
 .venv/bin/uvicorn agent_frontend.app:app --host 0.0.0.0 --port 8003
@@ -102,7 +115,7 @@ The backend reads configuration from `.env` and environment variables.
 - `CONTRACT_ADDRESS` - Existing deployed contract address to attach to
 Values set in the environment override `.env` values.
 
-Agent-related variables (`AGENT_ADDRESS`, `AGENT_PRIVATE_KEY`, `ORACLE_PRIVATE_KEY`, `PROVIDER_ALPHA_URL`, `PROVIDER_BETA_URL`, `OPENAI_API_KEY`, …) are read from `.env` by `agent_system/settings.py`.
+Agent-related variables (`AGENT_ADDRESS`, `AGENT_PRIVATE_KEY`, `ORACLE_PRIVATE_KEY`, `PROVIDER_ALPHA_URL`, `PROVIDER_BETA_URL`, `OPENAI_API_KEY`, …) are read from `.env` by `agent_backend/settings.py`.
 
 **Per-provider payment (on-chain):** the supervisor sets `providerPriceWei` per provider address via the dashboard (**Set on-chain price**) or `POST /set-provider-price`. Agents read that mapping when calling `requestResource` — not from `.env`. After upgrading the contract, **redeploy** and set prices again.
 
@@ -127,13 +140,13 @@ The supervisor dashboard lists providers **only from on-chain contract events** 
 
 **Payment flow:** the agent sends ETH with `requestResource` (`msg.value` = on-chain `providerPriceWei`). The contract does not need a pre-funded balance. After the agent fetches data, the oracle calls `confirmDelivery`, then `releasePayment` sends ETH to the provider. Optional: owner `POST /deposit` for a shared pool.
 
-### LangChain multi-agent system (`agent_system/`)
+### LangChain multi-agent system (`agent_backend/`)
 
-All agent code lives under `agent_system/`:
+All agent code lives under `agent_backend/`:
 
 | File | Role |
 |------|------|
-| `api.py` | Supervisor routes `/agent/*` (mounted from `backend/app.py`) |
+| `api.py` | Supervisor routes `/agent/*` (mounted from `backend_supervisor/app.py`) |
 | `service.py` | Provider discovery + micropayment orchestration |
 | `tools.py` / `graph.py` | LangChain tools and LangGraph workflow |
 | `settings.py` | Agent env configuration |
@@ -142,7 +155,7 @@ All agent code lives under `agent_system/`:
 Install agent dependencies:
 
 ```bash
-python -m pip install -r agent_system/requirements.txt
+python -m pip install -r agent_backend/requirements.txt
 ```
 
 Two agents (LangGraph):
@@ -154,12 +167,12 @@ Agent wallet (default `0x71FE831B3ef3a61e0EAFed83A3da31d2f08D4079`) signs `reque
 
 ```bash
 # LLM mode (needs OPENAI_API_KEY)
-python -m agent_system "What providers are available?"
-python -m agent_system "I need 10 random numbers"
+python -m agent_backend "What providers are available?"
+python -m agent_backend "I need 10 random numbers"
 
 # Direct mode without OpenAI
-python -m agent_system --count 10
-python -m agent_system --count 5
+python -m agent_backend --count 10
+python -m agent_backend --count 5
 ```
 
 Agent API on supervisor:

@@ -1,18 +1,21 @@
 """In-process micropayment purchase (used by API and LangChain tools)."""
 
+import logging
 from typing import Any, Optional
+
+logger = logging.getLogger("agent")
 
 from eth_account import Account
 from fastapi import HTTPException
 from web3 import Web3
 from web3.exceptions import ContractLogicError, TimeExhausted, Web3RPCError
 
-from agent_system.payment_flow import (
+from agent_backend.payment_flow import (
     PaymentFlowError,
     complete_request_payment,
     resolve_request_id_from_receipt,
 )
-from agent_system.service import (
+from agent_backend.service import (
     discover_provider_services,
     enrich_catalog_with_approval,
     fetch_provider_payload,
@@ -45,8 +48,9 @@ def run_purchase_random_numbers(
     if count not in (5, 10):
         raise PurchaseError("count must be 5 or 10")
 
-    import backend.app as supervisor
+    import backend_supervisor.app as supervisor
 
+    logger.info("Purchase: count=%s", count)
     contract = supervisor.get_contract()
     catalog = enrich_catalog_with_approval(contract, discover_provider_services())
     try:
@@ -70,6 +74,12 @@ def run_purchase_random_numbers(
         get_oracle_credentials()  # validate key exists
 
     provider_address = Web3.to_checksum_address(provider["address"])
+    logger.info(
+        "Selected provider %s (%s wei) resource=%s",
+        provider_address,
+        provider.get("priceWei"),
+        provider.get("resourceId"),
+    )
     resource_id = provider["resourceId"]
     payment_wei = amount_wei or int(provider.get("priceWei") or 0)
     if payment_wei <= 0:
@@ -90,8 +100,10 @@ def run_purchase_random_numbers(
         )
         transactions["requestResource"] = request_receipt.transactionHash.hex()
         request_id = resolve_request_id_from_receipt(contract, request_receipt)
+        logger.info("requestResource mined: requestId=%s tx=%s", request_id, transactions["requestResource"])
 
         data_payload = fetch_provider_payload(provider["serviceUrl"])
+        logger.info("Fetched %s numbers from %s", len(data_payload.get("numbers", [])), provider["serviceUrl"])
 
         completion = complete_request_payment(
             supervisor,

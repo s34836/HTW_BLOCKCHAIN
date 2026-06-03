@@ -3,14 +3,14 @@
 import logging
 from typing import Any, Optional
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("agent")
 
 from eth_account import Account
 from fastapi import HTTPException
 from web3 import Web3
 from web3.exceptions import ContractLogicError, TimeExhausted, Web3RPCError
 
-from agent_system.service import get_oracle_credentials
+from agent_backend.service import get_oracle_credentials
 
 
 class PaymentFlowError(Exception):

@@ -6,7 +6,7 @@ import sys
 
 from dotenv import load_dotenv
 
-from agent_system.settings import ROOT_DIR
+from agent_backend.settings import ROOT_DIR
 
 load_dotenv(dotenv_path=ROOT_DIR / ".env")
 
@@ -18,7 +18,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.count:
-        from agent_system.graph import run_direct_purchase
+        from agent_backend.graph import run_direct_purchase
 
         result = run_direct_purchase(args.count)
         print(json.dumps(result, indent=2))
@@ -29,7 +29,7 @@ def main() -> None:
         print("OPENAI_API_KEY is not set. Use --count 5 or --count 10 for direct mode.", file=sys.stderr)
         sys.exit(1)
 
-    from agent_system.graph import run_multi_agent
+    from agent_backend.graph import run_multi_agent
 
     result = asyncio.run(run_multi_agent(query))
     print(json.dumps(result, indent=2))

@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from web3 import Web3
 
+from htw_logging import attach_request_logging
+
 PROVIDER_ADDRESS = Web3.to_checksum_address("0xb91A1B6Fb3d910710984c301Cb162460Aef3b209")
 PROVIDER_NAME = "Data Provider Alpha"
 RANDOM_COUNT = 10
@@ -23,6 +25,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+logger = attach_request_logging(app, "provider-alpha")
+
+
+@app.on_event("startup")
+def log_startup():
+    logger.info(
+        "Provider Alpha ready | address=%s | port=%s | resource=%s",
+        PROVIDER_ADDRESS,
+        DEFAULT_PORT,
+        RESOURCE_ID,
+    )
 
 
 @app.get("/")
@@ -44,6 +57,7 @@ def health():
 @app.get("/random-numbers")
 def random_numbers():
     numbers = [random.randint(1, 1000) for _ in range(RANDOM_COUNT)]
+    logger.info("Serving %s random numbers to client", RANDOM_COUNT)
     return {
         "provider": PROVIDER_ADDRESS,
         "name": PROVIDER_NAME,

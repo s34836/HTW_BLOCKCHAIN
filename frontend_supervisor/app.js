@@ -27,7 +27,7 @@ let providerRegistry = [];
 
 const ETH_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/i;
 const REQUEST_TIMEOUT_MS = 180000;
-const BLOCKCHAIN_TIMEOUT_MS = 360000;
+const BLOCKCHAIN_TIMEOUT_MS = 420000;
 
 function formatWei(weiValue) {
   if (weiValue === undefined || weiValue === null) return "-- wei";
@@ -223,10 +223,23 @@ function formatOracleConfirmation(lastConfirmation) {
   return `Request #${lastConfirmation.requestId} · ${local}`;
 }
 
+function mergeRequestsForDisplay(data) {
+  const byId = new Map();
+  for (const request of data.recentRequests || []) {
+    byId.set(request.requestId, request);
+  }
+  for (const pending of data.pendingPayments || []) {
+    if (!byId.has(pending.requestId)) {
+      byId.set(pending.requestId, pending);
+    }
+  }
+  return Array.from(byId.values()).sort((a, b) => b.requestId - a.requestId);
+}
+
 function renderRecentRequests(data) {
   if (!recentRequestsListEl) return;
 
-  const requests = data.recentRequests || [];
+  const requests = mergeRequestsForDisplay(data);
   if (requests.length === 0) {
     recentRequestsListEl.innerHTML =
       '<p class="empty-state">No requests on chain yet.</p>' +

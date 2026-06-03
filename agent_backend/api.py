@@ -1,18 +1,20 @@
+import logging
 import os
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from agent_system.payment_flow import PaymentFlowError, complete_request_payment, list_pending_requests
-from agent_system.purchase_flow import PurchaseError, run_purchase_random_numbers
-from agent_system.service import (
+from agent_backend.payment_flow import PaymentFlowError, complete_request_payment, list_pending_requests
+from agent_backend.purchase_flow import PurchaseError, run_purchase_random_numbers
+from agent_backend.service import (
     discover_provider_services,
     enrich_catalog_with_approval,
     get_agent_credentials,
 )
-from agent_system.settings import agent_settings
+from agent_backend.settings import agent_settings
 
 router = APIRouter(tags=["agent"])
+logger = logging.getLogger("agent")
 
 
 class ChatMessage(BaseModel):
@@ -37,20 +39,21 @@ class AgentPurchaseRequest(BaseModel):
 
 
 def _supervisor():
-    import backend.app as supervisor
+    import backend_supervisor.app as supervisor
 
     return supervisor
 
 
 @router.post("/agent/chat")
 async def agent_chat(body: AgentChatRequest):
+    logger.info("Chat request (%d history turns): %s", len(body.history), body.message[:120])
     if not os.getenv("OPENAI_API_KEY"):
         raise HTTPException(
             status_code=503,
             detail="OPENAI_API_KEY is not configured. Add it to .env to use the chat agent.",
         )
     try:
-        from agent_system.chat import run_chat
+        from agent_backend.chat import run_chat
 
         result = await run_chat(
             body.message,
@@ -73,6 +76,7 @@ def agent_chat_health():
 @router.get("/agent/provider-catalog")
 def agent_provider_catalog():
     """Discover independent provider backends and on-chain approval flags."""
+    logger.info("Building provider catalog (HTTP discovery + on-chain prices)")
     supervisor = _supervisor()
     contract = supervisor.get_contract()
     catalog = discover_provider_services()
@@ -84,6 +88,7 @@ def agent_provider_catalog():
 
 @router.post("/agent/purchase-random-numbers")
 def agent_purchase_random_numbers(body: AgentPurchaseRequest):
+    logger.info("Purchase flow started: count=%s", body.count)
     try:
         return run_purchase_random_numbers(
             count=body.count,
@@ -106,6 +111,7 @@ def agent_pending_payments():
 
 @router.post("/agent/complete-request/{request_id}")
 def agent_complete_request(request_id: int):
+    logger.info("Complete request #%s (confirm + release)", request_id)
     supervisor = _supervisor()
     try:
         return complete_request_payment(supervisor, request_id)

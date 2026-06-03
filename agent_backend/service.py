@@ -1,12 +1,15 @@
 """Micropayment + provider orchestration for agents."""
 
+import logging
 from typing import Any
+
+logger = logging.getLogger("agent")
 
 import httpx
 from eth_account import Account
 from web3 import Web3
 
-from agent_system.settings import agent_settings
+from agent_backend.settings import agent_settings
 
 PROVIDER_SERVICE_URLS = [
     agent_settings.provider_alpha_url,
@@ -35,6 +38,7 @@ def get_oracle_credentials() -> tuple[str, str]:
 
 
 def discover_provider_services() -> list[dict[str, Any]]:
+    logger.info("Discovering providers at %s", ", ".join(PROVIDER_SERVICE_URLS))
     catalog: list[dict[str, Any]] = []
     for base_url in PROVIDER_SERVICE_URLS:
         url = base_url.rstrip("/")
@@ -45,8 +49,10 @@ def discover_provider_services() -> list[dict[str, Any]]:
                 info = response.json()
                 info["serviceUrl"] = url
                 info["online"] = True
+                logger.info("Provider online: %s (%s numbers)", info.get("name"), info.get("randomCount"))
                 catalog.append(info)
         except httpx.HTTPError as exc:
+            logger.warning("Provider offline %s: %s", url, exc)
             catalog.append(
                 {
                     "serviceUrl": url,
@@ -106,6 +112,6 @@ def enrich_catalog_with_approval(contract_instance, catalog: list[dict[str, Any]
 
 def resolve_request_id(contract_instance, receipt) -> int:
     """Backward-compatible alias for receipt → requestId parsing."""
-    from agent_system.payment_flow import resolve_request_id_from_receipt
+    from agent_backend.payment_flow import resolve_request_id_from_receipt
 
     return resolve_request_id_from_receipt(contract_instance, receipt)
