@@ -1,0 +1,36 @@
+# --- ENV ---
+.venv
+.venv.*
+*.venv
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Virtual environments ---
+venv/
+.env/
+.venv/
+env/
+ENV/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- IDE ---
+.vscode/
+.idea/
+
+# --- Logs ---
+*.log
+igor-notes.txt
+*.tgz
+*.pt
+application_data/
+data/
