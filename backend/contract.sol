@@ -18,8 +18,10 @@ contract AIAgentMicropayment {
     uint256 public requestCount;
     mapping(uint256 => Request) public requests;
     mapping(address => bool) public approvedProviders;
+    mapping(address => uint256) public providerPriceWei;
 
     event ProviderApproved(address provider, bool approved);
+    event ProviderPriceUpdated(address indexed provider, uint256 priceWei);
     event OracleUpdated(address oracle);
     event MaxAmountUpdated(uint256 maxAmountWei);
     event FundsDeposited(address from, uint256 amount);
@@ -33,6 +35,7 @@ contract AIAgentMicropayment {
     );
     event DeliveryConfirmed(uint256 indexed requestId);
     event PaymentReleased(uint256 indexed requestId, address indexed provider, uint256 amount);
+    event PaymentRefunded(uint256 indexed requestId, address indexed requester, uint256 amount);
     event Paused(bool status);
 
     modifier onlyOwner() {
@@ -89,6 +92,14 @@ contract AIAgentMicropayment {
         emit ProviderApproved(provider, approved);
     }
 
+    function setProviderPrice(address provider, uint256 priceWei) external onlyOwner {
+        require(provider != address(0), "Invalid provider");
+        require(priceWei > 0, "Price required");
+        require(priceWei <= maxAmountWei, "Price exceeds limit");
+        providerPriceWei[provider] = priceWei;
+        emit ProviderPriceUpdated(provider, priceWei);
+    }
+
     function setPaused(bool _paused) external onlyOwner {
         paused = _paused;
         emit Paused(_paused);
@@ -96,13 +107,13 @@ contract AIAgentMicropayment {
 
     function requestResource(
         address provider,
-        uint256 amount,
         string calldata resourceId
-    ) external notPaused returns (uint256) {
+    ) external payable notPaused returns (uint256) {
         require(approvedProviders[provider], "Provider not approved");
-        require(amount > 0, "Amount must be > 0");
+        uint256 amount = providerPriceWei[provider];
+        require(amount > 0, "Provider price not set");
         require(amount <= maxAmountWei, "Amount exceeds limit");
-        require(address(this).balance >= amount, "Insufficient contract balance");
+        require(msg.value == amount, "Payment must match provider price");
 
         requestCount += 1;
         requests[requestCount] = Request({
@@ -139,5 +150,17 @@ contract AIAgentMicropayment {
         payable(r.provider).transfer(r.amount);
 
         emit PaymentReleased(requestId, r.provider, r.amount);
+    }
+
+    function refundToRequester(uint256 requestId) external onlyOwner notPaused {
+        Request storage r = requests[requestId];
+        require(r.amount > 0, "Invalid request");
+        require(!r.paid, "Already settled");
+        require(address(this).balance >= r.amount, "Insufficient balance");
+
+        r.paid = true;
+        payable(r.requester).transfer(r.amount);
+
+        emit PaymentRefunded(requestId, r.requester, r.amount);
     }
 }

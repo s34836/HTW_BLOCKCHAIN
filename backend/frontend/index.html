@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supervisor Dashboard</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="brand">Supervisor Dashboard</div>
+      <div class="status-badge">Agent Status: <strong id="agent-status">Active</strong></div>
+    </header>
+
+    <main class="grid-container">
+      <section class="card card-1">
+        <h2>Budget Controls</h2>
+        <div class="card-body">
+          <div class="field-row"><span>Contract Max</span><strong id="max-amount">-- wei</strong></div>
+          <div class="field-row"><span>Contract Balance</span><strong id="contract-balance">-- wei</strong></div>
+          <div class="field-row"><span>Status</span><strong id="contract-status">ACTIVE</strong></div>
+        </div>
+        <div class="button-row">
+          <button type="button" id="pause-btn">Pause Agent</button>
+          <button type="button" id="edit-limits-btn">Edit Limits</button>
+        </div>
+      </section>
+
+      <section class="card card-2">
+        <h2>Providers (on-chain)</h2>
+        <div class="card-body">
+          <p class="card-hint">Listed addresses come only from contract events (<code>ProviderApproved</code>, <code>ProviderPriceUpdated</code>, <code>RequestCreated</code>). Status and price are read from <code>approvedProviders</code> and <code>providerPriceWei</code>.</p>
+          <ul id="provider-payments-list" class="provider-catalog">
+            <li class="empty-state">Not loaded — click Refresh below</li>
+          </ul>
+        </div>
+        <div class="button-row">
+          <button type="button" id="add-provider-btn">Approve provider</button>
+          <button type="button" id="remove-provider-btn">Revoke provider</button>
+        </div>
+      </section>
+
+      <section class="card card-3">
+        <h2>Alerts</h2>
+        <div class="card-body">
+          <ul class="alert-list">
+            <li>Not loaded — click Refresh below</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="card card-4">
+        <h2>Oracle Status</h2>
+        <div class="card-body">
+          <div class="info-row"><span>Assigned Oracle</span><strong id="oracle-address">--</strong></div>
+          <div class="info-row"><span>Last Confirmation</span><strong id="oracle-last">--</strong></div>
+          <div class="info-row"><span>Health</span><strong id="oracle-health">--</strong></div>
+        </div>
+      </section>
+
+      <section class="card card-6">
+        <h2>Recent Requests</h2>
+        <div class="card-body">
+          <div id="recent-requests-list">
+            <div class="request-row"><span>Request Count</span><strong id="request-count">0</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card card-7">
+        <h2>Contract</h2>
+        <div class="card-body">
+          <p>Network: Sepolia Testnet</p>
+          <p class="mono-wrap">Address: <strong id="policy-contract-address">--</strong></p>
+          <p>Approved providers: <strong id="policy-approved-count">--</strong></p>
+          <p>Manual refresh only (footer button)</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer-panel">
+      <div>
+        <button id="refresh-status">Refresh contract status</button>
+        <span id="contract-info">Contract: not attached</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

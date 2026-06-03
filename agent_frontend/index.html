@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Chat — Micropayment</title>
+  <link rel="stylesheet" href="/static/chat.css" />
+</head>
+<body>
+  <div class="chat-shell">
+    <header class="chat-header">
+      <div>
+        <h1>Agent Chat</h1>
+        <p class="subtitle">LLM + on-chain micropayments (Sepolia)</p>
+      </div>
+      <div class="header-meta">
+        <a href="http://127.0.0.1:8000/" class="link-supervisor" id="supervisor-link">Supervisor dashboard</a>
+        <span id="agent-wallet" class="wallet-badge">Agent: --</span>
+      </div>
+    </header>
+
+    <main id="chat-messages" class="chat-messages" aria-live="polite">
+      <div class="message assistant">
+        <div class="bubble">
+          Hi. I can list available providers or buy 5 or 10 random numbers on-chain when you need them.
+        </div>
+      </div>
+    </main>
+
+    <footer class="chat-composer">
+      <form id="chat-form">
+        <textarea
+          id="chat-input"
+          rows="2"
+          placeholder="e.g. I need 10 random numbers for a simulation..."
+          autocomplete="off"
+        ></textarea>
+        <button type="submit" id="send-btn">Send</button>
+      </form>
+      <p id="chat-status" class="chat-status">Checking configuration...</p>
+    </footer>
+  </div>
+
+  <script src="/config.js"></script>
+  <script src="/static/chat.js"></script>
+</body>
+</html>

@@ -3,8 +3,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-ROOT_DIR = Path(__file__).resolve().parent
-DOTENV_PATH = ROOT_DIR / ".env"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DOTENV_PATH = REPO_ROOT / ".env"
 load_dotenv(dotenv_path=DOTENV_PATH)
 
 
